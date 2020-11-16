@@ -1,28 +1,30 @@
-FROM ubuntu:20.10 as base
+FROM alpine:3.12.1 as base
 
 FROM base as builder
 
 ENV LANG=C.UTF-8
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
         ghostscript \
-        gosu \
-        build-essential autoconf automake libtool \
-        libleptonica-dev \
-        zlib1g-dev \
+        alpine-sdk libffi-dev libxslt libxml2 autoconf automake libtool \
+        zlib-dev \
         ca-certificates \
         curl \
         git \
-        python3-venv \
-        python3-pip \
+        python3 \
+        py3-virtualenv \
+        py3-pip \
         qpdf \
         pngquant \
         tesseract-ocr \
-        tesseract-ocr-eng \
-        tesseract-ocr-osd \
-        unpaper \
-    && rm -rf /var/lib/apt/lists/*
+        unpaper 
+
+RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
+        leptonica-dev \
+        ocrmypdf
+
+RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing \
+        gosu
 
 # Get the latest pip (Ubuntu version doesn't support manylinux2010)
 RUN \
@@ -42,8 +44,7 @@ RUN \
 
 COPY src/requirements.txt /app/
 RUN python3 -m venv --system-site-packages /appenv
-RUN . /appenv/bin/activate; \
-    pip install -r /app/requirements.txt
+RUN . /appenv/bin/activate && pip install -r /app/requirements.txt
 
 
 ### Begin Runtime Image
@@ -51,21 +52,23 @@ FROM base
 
 ENV LANG=C.UTF-8
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
   ghostscript \
-  img2pdf \
-  liblept5 \
-  libsm6 libxext6 libxrender-dev \
-  zlib1g \
+  zlib-dev \
   pngquant \
   python3 \
-  python3-venv \
+  py3-virtualenv \
   qpdf \
-  gosu \
   tesseract-ocr \
-  tesseract-ocr-deu \
-  tesseract-ocr-eng \
+  tesseract-ocr-data-deu \
   unpaper
+
+RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing \
+        gosu
+
+RUN apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
+        ocrmypdf \
+        py3-img2pdf
 
 WORKDIR /app
 
@@ -77,19 +80,20 @@ RUN python3 -m venv --system-site-packages /appenv
 
 RUN . /appenv/bin/activate;
 
-COPY src/ /app/
+COPY ./src /app
 
 
 # Create restricted privilege user docker:docker to drop privileges
 # to later. We retain root for the entrypoint in order to install
 # additional tesseract OCR language packages.
-RUN groupadd -g 1000 docker && \
-    useradd -u 1000 -g docker -N --home-dir /app docker && \
+RUN addgroup -g 1000 docker && \
+    adduser --disabled-password --uid 1000 --home /app docker -G docker && \
     mkdir /config /input /output /ocrtemp /archive && \
     chown -Rh docker:docker /app /config /input /output /ocrtemp /archive && \
     chmod 755 /app/docker-entrypoint.sh
 
 VOLUME ["/config", "/input", "/output", "/ocrtemp", "/archive"]
 
+#CMD ["sh", "/app/docker-entrypoint.sh"]
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 umask 000
@@ -38,7 +38,7 @@ initialize() {
 install_languages() {
     local langs="$1"
     local ran_update=0
-    read -ra langs <<<"$langs"
+    #read -ra langs <<<"$langs"
 
     # Check that it is not empty
     if [ ${#langs[@]} -eq 0 ]; then
@@ -77,13 +77,13 @@ install_languages() {
     fi
 }
 
-if [[ "$1" != "/"* ]]; then
+if [ "$1" != "/" ]; then
     initialize
 
     # Install additional languages if specified
-    if [ ! -z "$OCR_LANGUAGES"  ]; then
-        install_languages "$OCR_LANGUAGES"
-    fi
+    #if [ ! -z "$OCR_LANGUAGES"  ]; then
+        #install_languages "$OCR_LANGUAGES"
+    #fi
 
     . /appenv/bin/activate
     cd /app

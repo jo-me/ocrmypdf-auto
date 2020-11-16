@@ -1,4 +1,6 @@
 plumbum==1.6.9
 ocrmypdf==11.3.3
 watchdog==0.10.3
-requests~=2.25.0
+requests==2.25.0
+urllib3==1.26.2
+certifi==2020.11.08
